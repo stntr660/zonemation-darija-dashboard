@@ -652,7 +652,37 @@ if app.config.get('SENTRY_DSN'):
     except ImportError:
         app.logger.warning('Sentry SDK not installed - monitoring disabled')
 
+# Initialize database on import (for Gunicorn)
+with app.app_context():
+    try:
+        db.create_all()
+        app.logger.info('Database tables created successfully')
+        
+        # Check for existing admin user
+        existing_admin = User.query.filter_by(username=app.config['ADMIN_USERNAME']).first()
+        
+        if not existing_admin:
+            admin_password = app.config.get('ADMIN_PASSWORD')
+            if admin_password and admin_password.strip():
+                admin_user = User(
+                    username=app.config['ADMIN_USERNAME'],
+                    email=app.config['ADMIN_EMAIL'],
+                    is_admin=True,
+                    is_active=True
+                )
+                admin_user.set_password(admin_password)
+                db.session.add(admin_user)
+                db.session.commit()
+                app.logger.info(f'Admin user created: {app.config["ADMIN_USERNAME"]} with email {app.config["ADMIN_EMAIL"]}')
+            else:
+                app.logger.warning(f'No ADMIN_PASSWORD set in environment - admin user not created. Password value: {bool(admin_password)}')
+        else:
+            app.logger.info(f'Admin user already exists: {existing_admin.username}')
+    except Exception as e:
+        app.logger.error(f'Database initialization error: {e}')
+        import traceback
+        app.logger.error(traceback.format_exc())
+
 if __name__ == '__main__':
-    init_db()
     # Never run with debug=True in production!
     app.run(host='0.0.0.0', port=5000, debug=False)

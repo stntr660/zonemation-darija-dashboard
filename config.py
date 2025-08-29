@@ -51,7 +51,7 @@ class Config:
     # Admin defaults (first run only)
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@zonemation.com')
-    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD')
+    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
     
     # Logging
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
