@@ -79,7 +79,9 @@ limiter = Limiter(
 )
 
 # Security headers (HTTPS enforced in production)
-if app.config.get('SESSION_COOKIE_SECURE'):
+# Skip Talisman for Railway deployment - it's causing health check issues
+# Railway provides SSL termination at their proxy level
+if app.config.get('SESSION_COOKIE_SECURE') and False:  # Disabled for Railway
     Talisman(app, 
         force_https=True,
         strict_transport_security=True,
@@ -91,6 +93,17 @@ if app.config.get('SESSION_COOKIE_SECURE'):
             'img-src': "'self' data: https:",
         }
     )
+
+# ============== HEALTH CHECK (Early definition) ==============
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring - no auth required"""
+    return jsonify({
+        'status': 'healthy', 
+        'timestamp': datetime.datetime.utcnow().isoformat(),
+        'app': 'darija-dashboard'
+    }), 200
 
 # ============== DATABASE MODELS ==============
 
@@ -598,15 +611,6 @@ def api_list_tokens():
             'is_active': t.is_active
         } for t in tokens]
     })
-
-@app.route('/health')
-def health_check():
-    """Health check endpoint for monitoring - no auth required"""
-    return jsonify({
-        'status': 'healthy', 
-        'timestamp': datetime.datetime.utcnow().isoformat(),
-        'app': 'darija-dashboard'
-    }), 200
 
 # ============== INITIALIZATION ==============
 
