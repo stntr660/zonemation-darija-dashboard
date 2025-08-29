@@ -28,6 +28,7 @@
                                     <th>Created</th>
                                     <th>Last Used</th>
                                     <th>Usage</th>
+                                    <th>Rate Limit</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -53,6 +54,15 @@
                                     </td>
                                     <td>{{ token.usage_count }}</td>
                                     <td>
+                                        <div class="d-flex align-items-center">
+                                            <span id="rate-limit-{{ token.id }}">{{ token.rate_limit }}/hr</span>
+                                            <button class="btn btn-sm btn-link p-0 ms-2" 
+                                                    onclick="editRateLimit({{ token.id }}, {{ token.rate_limit }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
                                         {% if token.is_active %}
                                             <span class="badge bg-success">Active</span>
                                         {% else %}
@@ -60,17 +70,21 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if token.is_active %}
-                                            <button class="btn btn-sm btn-danger" 
-                                                    onclick="revokeToken({{ token.id }})">
-                                                <i class="fas fa-ban"></i> Revoke
-                                            </button>
-                                        {% else %}
-                                            <button class="btn btn-sm btn-success" 
-                                                    onclick="reactivateToken({{ token.id }})">
-                                                <i class="fas fa-check"></i> Reactivate
-                                            </button>
-                                        {% endif %}
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if token.is_active %}
+                                                <button class="btn btn-outline-danger" 
+                                                        onclick="revokeToken({{ token.id }})"
+                                                        title="Revoke Token">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            {% else %}
+                                                <button class="btn btn-outline-success" 
+                                                        onclick="reactivateToken({{ token.id }})"
+                                                        title="Reactivate Token">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -306,8 +320,69 @@ async function revokeToken(tokenId) {
 }
 
 async function reactivateToken(tokenId) {
-    alert('Token reactivation would be implemented here');
-    // In production, implement reactivation endpoint
+    if (!confirm('Are you sure you want to reactivate this token?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/tokens/${tokenId}/reactivate`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error reactivating token: ' + (error.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error reactivating token: ' + error.message);
+    }
+}
+
+function editRateLimit(tokenId, currentLimit) {
+    const newLimit = prompt(`Enter new rate limit (requests per hour):\nCurrent: ${currentLimit}`, currentLimit);
+    
+    if (newLimit === null || newLimit === '') {
+        return;
+    }
+    
+    const limitValue = parseInt(newLimit);
+    
+    if (isNaN(limitValue) || limitValue < 1 || limitValue > 10000) {
+        alert('Rate limit must be between 1 and 10000');
+        return;
+    }
+    
+    updateRateLimit(tokenId, limitValue);
+}
+
+async function updateRateLimit(tokenId, newLimit) {
+    try {
+        const response = await fetch(`/tokens/${tokenId}/update-rate-limit`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({rate_limit: newLimit})
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            // Update the display without reloading
+            document.getElementById(`rate-limit-${tokenId}`).textContent = `${result.rate_limit}/hr`;
+            
+            // Show success feedback
+            const span = document.getElementById(`rate-limit-${tokenId}`);
+            span.style.color = '#28a745';
+            setTimeout(() => {
+                span.style.color = '';
+            }, 2000);
+        } else {
+            const error = await response.json();
+            alert('Error updating rate limit: ' + (error.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error updating rate limit: ' + error.message);
+    }
 }
 </script>
 {% endblock %}

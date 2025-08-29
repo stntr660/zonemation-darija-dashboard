@@ -520,6 +520,49 @@ def revoke_token(token_id):
     
     return jsonify({'success': True})
 
+@app.route('/tokens/<int:token_id>/reactivate', methods=['POST'])
+@login_required
+def reactivate_token(token_id):
+    api_token = ApiToken.query.filter_by(id=token_id, user_id=current_user.id).first()
+    
+    if not api_token:
+        return jsonify({'error': 'Token not found'}), 404
+    
+    api_token.is_active = True
+    db.session.commit()
+    
+    app.logger.info(f'User {current_user.username} reactivated token: {api_token.name}')
+    
+    return jsonify({'success': True})
+
+@app.route('/tokens/<int:token_id>/update-rate-limit', methods=['POST'])
+@login_required
+def update_token_rate_limit(token_id):
+    api_token = ApiToken.query.filter_by(id=token_id, user_id=current_user.id).first()
+    
+    if not api_token:
+        return jsonify({'error': 'Token not found'}), 404
+    
+    data = request.get_json()
+    new_rate_limit = data.get('rate_limit')
+    
+    if new_rate_limit is None:
+        return jsonify({'error': 'Rate limit value required'}), 400
+    
+    try:
+        new_rate_limit = int(new_rate_limit)
+        if new_rate_limit < 1 or new_rate_limit > 10000:
+            return jsonify({'error': 'Rate limit must be between 1 and 10000'}), 400
+    except ValueError:
+        return jsonify({'error': 'Invalid rate limit value'}), 400
+    
+    api_token.rate_limit = new_rate_limit
+    db.session.commit()
+    
+    app.logger.info(f'User {current_user.username} updated rate limit for token {api_token.name} to {new_rate_limit}')
+    
+    return jsonify({'success': True, 'rate_limit': new_rate_limit})
+
 @app.route('/settings')
 @login_required
 def settings():
