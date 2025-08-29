@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Darija ASR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">
+        <i class="fas fa-cog"></i> Settings
+    </h2>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Google API Configuration -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fab fa-google"></i> Google Cloud API Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Configure your Google Cloud Speech-to-Text API key for enhanced transcription
+                    </div>
+                    
+                    <form id="googleApiForm">
+                        <div class="mb-3">
+                            <label for="googleApiKey" class="form-label">Google Cloud API Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="googleApiKey" 
+                                       placeholder="Enter your Google Cloud API key"
+                                       value="{{ current_user.google_api_key or '' }}">
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()">
+                                    <i class="fas fa-eye" id="apiKeyToggle"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                Your API key is encrypted and stored securely
+                            </small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save API Key
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="testGoogleApi()">
+                            <i class="fas fa-vial"></i> Test Connection
+                        </button>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <h6>How to get Google Cloud API Key:</h6>
+                    <ol>
+                        <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                        <li>Create a new project or select existing one</li>
+                        <li>Enable "Cloud Speech-to-Text API"</li>
+                        <li>Go to "Credentials" → "Create Credentials" → "API Key"</li>
+                        <li>Copy the API key and paste it above</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <!-- Account Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user"></i> Account Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Username:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ current_user.username }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Email:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ current_user.email }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Member Since:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ current_user.created_at.strftime('%B %d, %Y') }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Total Transcriptions:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ current_user.transcriptions|length }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Active API Tokens:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ current_user.tokens|selectattr('is_active')|list|length }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie"></i> Usage Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="stat-card mb-3">
+                        <h4>{{ current_user.tokens|length }}</h4>
+                        <p>Total API Tokens</p>
+                    </div>
+                    
+                    <div class="stat-card mb-3">
+                        <h4>{{ current_user.transcriptions|length }}</h4>
+                        <p>Total Transcriptions</p>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h4>0.0</h4>
+                        <p>Minutes Processed</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Danger Zone -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Once you delete your account, there is no going back. Please be certain.
+                    </p>
+                    <button class="btn btn-danger w-100" onclick="confirmDeleteAccount()">
+                        <i class="fas fa-trash"></i> Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('googleApiKey');
+    const icon = document.getElementById('apiKeyToggle');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+document.getElementById('googleApiForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const apiKey = document.getElementById('googleApiKey').value;
+    
+    try {
+        const response = await fetch('/settings/google-api', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({api_key: apiKey})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Google API key saved successfully!');
+        } else {
+            alert('Failed to save API key: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+});
+
+async function testGoogleApi() {
+    const apiKey = document.getElementById('googleApiKey').value;
+    
+    if (!apiKey) {
+        alert('Please enter an API key first');
+        return;
+    }
+    
+    alert('Testing Google Cloud connection...\nThis feature will be implemented with actual Google Cloud SDK integration.');
+}
+
+function confirmDeleteAccount() {
+    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+        if (confirm('This will delete all your data including tokens and transcriptions. Are you absolutely sure?')) {
+            alert('Account deletion would be processed here');
+            // In production, make API call to delete account
+        }
+    }
+}
+</script>
+{% endblock %}

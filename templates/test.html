@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}Test Transcription - Darija ASR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">
+        <i class="fas fa-vial"></i> Test Audio Transcription
+    </h2>
+    
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-upload"></i> Upload Audio</h5>
+                </div>
+                <div class="card-body">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                        <h4>Drop audio file here</h4>
+                        <p class="text-muted">or click to browse</p>
+                        <input type="file" id="audioFile" accept="audio/*" hidden>
+                        <button class="btn btn-primary" onclick="document.getElementById('audioFile').click()">
+                            <i class="fas fa-folder-open"></i> Choose File
+                        </button>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                Supported: MP3, WAV, M4A, OGG (Max 16MB)
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div id="fileInfo" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-file-audio"></i> <span id="fileName"></span>
+                            <button class="btn btn-sm btn-danger float-end" onclick="clearFile()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button id="transcribeBtn" class="btn btn-success w-100 mt-3" style="display: none;" onclick="transcribeAudio()">
+                        <i class="fas fa-play"></i> Start Transcription
+                    </button>
+                    
+                    <div class="loading-spinner" id="loadingSpinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <p class="mt-2">Transcribing audio...</p>
+                        <div class="audio-wave"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-file-alt"></i> Transcription Results</h5>
+                </div>
+                <div class="card-body">
+                    <div id="resultsArea">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-microphone-slash fa-3x mb-3"></i>
+                            <p>Upload an audio file to see transcription</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- API Testing -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-key"></i> Test API Token</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="apiToken" class="form-label">API Token</label>
+                        <input type="text" class="form-control font-monospace" id="apiToken" 
+                               placeholder="Paste your API token here to test">
+                        <small class="text-muted">
+                            Don't have a token? <a href="/tokens">Create one here</a>
+                        </small>
+                    </div>
+                    
+                    <button id="testTokenBtn" class="btn btn-warning w-100" onclick="testWithToken()" style="display: none;">
+                        <i class="fas fa-rocket"></i> Test with API Token
+                    </button>
+                    
+                    <div id="tokenTestResult" class="mt-3" style="display: none;">
+                        <div class="alert" id="tokenTestAlert">
+                            <h6 class="mb-2">API Response:</h6>
+                            <pre class="mb-0"><code id="tokenTestCode"></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- API Example -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-code"></i> API Usage Example</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" id="apiTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="curl-tab" data-bs-toggle="tab" data-bs-target="#curl" type="button">cURL</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="python-tab" data-bs-toggle="tab" data-bs-target="#python" type="button">Python</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="js-tab" data-bs-toggle="tab" data-bs-target="#javascript" type="button">JavaScript</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="apiTabContent">
+                        <div class="tab-pane fade show active" id="curl" role="tabpanel">
+                            <pre><code>curl -X POST {{ request.url_root }}api/v1/transcribe \
+  -H "X-API-Token: YOUR_TOKEN" \
+  -F "audio=@audio.wav"</code></pre>
+                        </div>
+                        <div class="tab-pane fade" id="python" role="tabpanel">
+                            <pre><code>import requests
+
+url = "{{ request.url_root }}api/v1/transcribe"
+headers = {"X-API-Token": "YOUR_TOKEN"}
+files = {"audio": open("audio.wav", "rb")}
+
+response = requests.post(url, headers=headers, files=files)
+print(response.json())</code></pre>
+                        </div>
+                        <div class="tab-pane fade" id="javascript" role="tabpanel">
+                            <pre><code>const formData = new FormData();
+formData.append('audio', audioFile);
+
+fetch('{{ request.url_root }}api/v1/transcribe', {
+    method: 'POST',
+    headers: {
+        'X-API-Token': 'YOUR_TOKEN'
+    },
+    body: formData
+})
+.then(response => response.json())
+.then(data => console.log(data));</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFile = null;
+
+// Drag and drop
+const uploadArea = document.getElementById('uploadArea');
+const audioFileInput = document.getElementById('audioFile');
+
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFileSelect(files[0]);
+    }
+});
+
+audioFileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+    }
+});
+
+// Monitor token input
+document.getElementById('apiToken').addEventListener('input', (e) => {
+    const token = e.target.value.trim();
+    const testBtn = document.getElementById('testTokenBtn');
+    
+    if (token && selectedFile) {
+        testBtn.style.display = 'block';
+    } else {
+        testBtn.style.display = 'none';
+    }
+});
+
+function handleFileSelect(file) {
+    // Check file type
+    if (!file.type.startsWith('audio/')) {
+        alert('Please select an audio file');
+        return;
+    }
+    
+    // Check file size (16MB)
+    if (file.size > 16 * 1024 * 1024) {
+        alert('File size must be less than 16MB');
+        return;
+    }
+    
+    selectedFile = file;
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileInfo').style.display = 'block';
+    document.getElementById('transcribeBtn').style.display = 'block';
+    
+    // Check if token is present to show test button
+    const token = document.getElementById('apiToken').value.trim();
+    if (token) {
+        document.getElementById('testTokenBtn').style.display = 'block';
+    }
+}
+
+function clearFile() {
+    selectedFile = null;
+    audioFileInput.value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('transcribeBtn').style.display = 'none';
+}
+
+async function transcribeAudio() {
+    if (!selectedFile) return;
+    
+    const formData = new FormData();
+    formData.append('audio', selectedFile);
+    
+    // Show loading
+    document.getElementById('loadingSpinner').classList.add('active');
+    document.getElementById('transcribeBtn').disabled = true;
+    
+    try {
+        const response = await fetch('/transcribe', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            displayResults(result);
+        } else {
+            alert('Transcription failed: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    } finally {
+        document.getElementById('loadingSpinner').classList.remove('active');
+        document.getElementById('transcribeBtn').disabled = false;
+    }
+}
+
+function displayResults(result) {
+    let html = '<div class="results">';
+    
+    // Best result
+    if (result.best) {
+        html += `
+            <div class="alert alert-success">
+                <h6><i class="fas fa-check-circle"></i> Best Transcription:</h6>
+                <p class="arabic-text mb-0">${result.best}</p>
+            </div>
+        `;
+    }
+    
+    // All results
+    if (result.results) {
+        html += '<h6 class="mt-3">All Results:</h6>';
+        
+        for (const [lang, text] of Object.entries(result.results)) {
+            const langLabel = {
+                'darija': 'Moroccan Arabic (Darija)',
+                'arabic': 'Standard Arabic',
+                'french': 'French'
+            }[lang] || lang;
+            
+            html += `
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <small class="text-muted">${langLabel}:</small>
+                        <p class="arabic-text mb-0">${text}</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Copy button
+    if (result.best) {
+        html += `
+            <button class="btn btn-outline-primary mt-3" onclick="copyText('${result.best.replace(/'/g, "\\'")}')">
+                <i class="fas fa-copy"></i> Copy Transcription
+            </button>
+        `;
+    }
+    
+    html += '</div>';
+    
+    document.getElementById('resultsArea').innerHTML = html;
+}
+
+function copyText(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    
+    // Show feedback
+    const btn = event.target;
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+    }, 2000);
+}
+
+async function testWithToken() {
+    const token = document.getElementById('apiToken').value.trim();
+    
+    if (!token) {
+        alert('Please enter an API token');
+        return;
+    }
+    
+    if (!selectedFile) {
+        alert('Please select an audio file first');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('audio', selectedFile);
+    
+    const testBtn = document.getElementById('testTokenBtn');
+    const originalBtnHTML = testBtn.innerHTML;
+    testBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Testing API...';
+    testBtn.disabled = true;
+    
+    const resultDiv = document.getElementById('tokenTestResult');
+    const alertDiv = document.getElementById('tokenTestAlert');
+    const codeBlock = document.getElementById('tokenTestCode');
+    
+    try {
+        const startTime = Date.now();
+        
+        const response = await fetch('/api/v1/transcribe', {
+            method: 'POST',
+            headers: {
+                'X-API-Token': token
+            },
+            body: formData
+        });
+        
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+        const result = await response.json();
+        
+        // Show result
+        resultDiv.style.display = 'block';
+        
+        if (response.ok) {
+            alertDiv.className = 'alert alert-success';
+            codeBlock.innerHTML = `Status: ${response.status} OK
+Time: ${elapsedTime}s
+Response:
+${JSON.stringify(result, null, 2)}`;
+            
+            // Also display in main results area
+            if (result.transcription) {
+                displayResults({
+                    success: true,
+                    results: {
+                        'API Token Test': result.transcription
+                    },
+                    best: result.transcription
+                });
+            }
+        } else {
+            alertDiv.className = 'alert alert-danger';
+            codeBlock.innerHTML = `Status: ${response.status} ${response.statusText}
+Time: ${elapsedTime}s
+Error:
+${JSON.stringify(result, null, 2)}`;
+        }
+        
+    } catch (error) {
+        resultDiv.style.display = 'block';
+        alertDiv.className = 'alert alert-danger';
+        codeBlock.innerHTML = `Network Error:
+${error.message}`;
+    } finally {
+        testBtn.innerHTML = originalBtnHTML;
+        testBtn.disabled = false;
+    }
+}
+
+// Update the API examples with the actual token if present
+document.getElementById('apiToken').addEventListener('input', (e) => {
+    const token = e.target.value.trim();
+    
+    // Update examples if token is entered
+    if (token) {
+        // Update all code examples
+        document.querySelectorAll('pre code').forEach(code => {
+            code.innerHTML = code.innerHTML.replace(/YOUR_TOKEN/g, token.substring(0, 20) + '...');
+        });
+    }
+});
+</script>
+{% endblock %}

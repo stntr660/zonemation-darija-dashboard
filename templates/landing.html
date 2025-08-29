@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Zonemation - Darija Speech Recognition{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #7a9e3f 0%, #a7d26d 100%);
+        font-family: 'Montserrat', sans-serif;
+    }
+    
+    .hero-section {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-content {
+        text-align: center;
+        color: white;
+        z-index: 2;
+        position: relative;
+        padding: 2rem;
+    }
+    
+    .company-name {
+        font-size: 5rem;
+        font-weight: 800;
+        letter-spacing: -2px;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        background: linear-gradient(90deg, #fff 0%, #e0e0e0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    @media (max-width: 768px) {
+        .company-name {
+            font-size: 3rem;
+        }
+    }
+    
+    .tagline {
+        font-size: 1.8rem;
+        font-weight: 300;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+        opacity: 0.95;
+    }
+    
+    .description {
+        font-size: 1.1rem;
+        font-weight: 400;
+        line-height: 1.8;
+        max-width: 800px;
+        margin: 0 auto 3rem;
+        opacity: 0.9;
+    }
+    
+    .feature-badge {
+        display: inline-block;
+        padding: 0.5rem 1.5rem;
+        margin: 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        backdrop-filter: blur(10px);
+    }
+    
+    .cta-section {
+        margin-top: 3rem;
+    }
+    
+    .btn-hero {
+        padding: 1rem 3rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-primary-hero {
+        background: white;
+        color: #7a9e3f;
+    }
+    
+    .btn-primary-hero:hover {
+        background: #f0f0f0;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .btn-secondary-hero {
+        background: transparent;
+        color: white;
+        border: 2px solid white;
+    }
+    
+    .btn-secondary-hero:hover {
+        background: white;
+        color: #7a9e3f;
+        transform: translateY(-2px);
+    }
+    
+    /* Animated background elements */
+    .bg-shapes {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 1;
+    }
+    
+    .shape {
+        position: absolute;
+        opacity: 0.05;
+    }
+    
+    .shape-1 {
+        width: 300px;
+        height: 300px;
+        background: white;
+        border-radius: 50%;
+        top: -150px;
+        right: -150px;
+        animation: float 20s infinite ease-in-out;
+    }
+    
+    .shape-2 {
+        width: 200px;
+        height: 200px;
+        background: white;
+        border-radius: 50%;
+        bottom: -100px;
+        left: -100px;
+        animation: float 15s infinite ease-in-out reverse;
+    }
+    
+    .shape-3 {
+        width: 400px;
+        height: 400px;
+        background: white;
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: pulse 10s infinite ease-in-out;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-30px) rotate(180deg); }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.05; }
+        50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.08; }
+    }
+    
+    .arabic-showcase {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 2rem;
+        margin: 2rem 0;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .arabic-text {
+        font-size: 2.5rem;
+        direction: rtl;
+        margin: 1rem 0;
+        font-weight: 600;
+    }
+    
+    .transcription-arrow {
+        font-size: 2rem;
+        margin: 1rem 0;
+        animation: bounce 2s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .logo-section {
+        margin-bottom: 2rem;
+    }
+    
+    .logo {
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    
+    .logo i {
+        font-size: 3rem;
+        color: #7a9e3f;
+    }
+    
+    /* Hide navbar on landing page */
+    .navbar {
+        display: none;
+    }
+    
+    .footer-text {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        font-weight: 400;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+    
+    <div class="hero-content">
+        <div class="logo-section">
+            <div class="logo">
+                <i class="fas fa-microphone-alt"></i>
+            </div>
+        </div>
+        
+        <h1 class="company-name">ZONEMATION</h1>
+        
+        <p class="tagline">Advanced Darija Speech Recognition</p>
+        
+        <p class="description">
+            Transforming Moroccan Arabic speech into text with cutting-edge AI technology. 
+            Our platform delivers precise transcription for Darija, the living language of Morocco, 
+            bridging communication gaps and enabling digital transformation across industries.
+        </p>
+        
+        <div class="arabic-showcase">
+            <div class="arabic-text">شحال باقي فالصنداله</div>
+            <div class="transcription-arrow">↓</div>
+            <div style="font-size: 1.5rem; font-weight: 300;">
+                "How much is left in the box"
+            </div>
+        </div>
+        
+        <div class="features mb-4">
+            <span class="feature-badge">🇲🇦 Moroccan Darija</span>
+            <span class="feature-badge">🎯 95% Accuracy</span>
+            <span class="feature-badge">⚡ Real-time Processing</span>
+            <span class="feature-badge">🔒 Enterprise Security</span>
+        </div>
+        
+        <div class="cta-section">
+            <a href="/login" class="btn btn-hero btn-primary-hero me-3">
+                <i class="fas fa-lock me-2"></i> Admin Portal
+            </a>
+            <a href="/api/docs" class="btn btn-hero btn-secondary-hero">
+                <i class="fas fa-book me-2"></i> API Documentation
+            </a>
+        </div>
+    </div>
+    
+    <div class="footer-text">
+        © 2024 Zonemation. Pioneering Arabic Language Technology.
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation - Darija ASR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .endpoint-card {
+        border-left: 4px solid #a7d26d;
+        margin-bottom: 2rem;
+    }
+    
+    .method-badge {
+        font-weight: bold;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+    }
+    
+    .method-get { background: #5CB85C; color: white; }
+    .method-post { background: #a7d26d; color: white; }
+    .method-put { background: #F0AD4E; color: white; }
+    .method-delete { background: #D9534F; color: white; }
+    
+    .code-block {
+        background: #2C3E50;
+        color: #ECF0F1;
+        padding: 1rem;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        overflow-x: auto;
+    }
+    
+    .param-table {
+        background: white;
+    }
+    
+    .param-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .response-example {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .toc-link {
+        color: #495057;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        display: block;
+        border-left: 3px solid transparent;
+        transition: all 0.3s;
+    }
+    
+    .toc-link:hover {
+        background: #f8f9fa;
+        border-left-color: #a7d26d;
+        color: #a7d26d;
+    }
+    
+    .toc-link.active {
+        background: #e9ecef;
+        border-left-color: #a7d26d;
+        color: #a7d26d;
+        font-weight: 600;
+    }
+    
+    .status-code {
+        font-weight: bold;
+        font-family: monospace;
+    }
+    
+    .status-200 { color: #5CB85C; }
+    .status-400 { color: #F0AD4E; }
+    .status-401 { color: #D9534F; }
+    .status-500 { color: #D9534F; }
+    
+    .sticky-sidebar {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #ECF0F1;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+    
+    .copy-btn:hover {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    .rate-limit-box {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .auth-box {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Table of Contents -->
+        <div class="col-lg-3">
+            <div class="card sticky-sidebar">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Contents</h5>
+                </div>
+                <div class="card-body p-0">
+                    <nav class="nav flex-column">
+                        <a class="toc-link active" href="#overview">Overview</a>
+                        <a class="toc-link" href="#authentication">Authentication</a>
+                        <a class="toc-link" href="#rate-limits">Rate Limits</a>
+                        <a class="toc-link" href="#endpoints">Endpoints</a>
+                        <a class="toc-link ms-3" href="#transcribe">POST /api/v1/transcribe</a>
+                        <a class="toc-link ms-3" href="#tokens-list">GET /api/v1/tokens</a>
+                        <a class="toc-link" href="#examples">Code Examples</a>
+                        <a class="toc-link" href="#errors">Error Handling</a>
+                        <a class="toc-link" href="#best-practices">Best Practices</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <h1 class="mb-4">
+                <i class="fas fa-book"></i> API Documentation
+            </h1>
+            
+            <!-- Overview -->
+            <section id="overview" class="mb-5">
+                <h2>Overview</h2>
+                <p class="lead">
+                    The Darija ASR API provides programmatic access to our speech-to-text transcription service, 
+                    supporting Moroccan Arabic (Darija), Standard Arabic, and French languages.
+                </p>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h5>Base URL</h5>
+                        <div class="code-block">{{ request.url_root }}api/v1</div>
+                        
+                        <h5 class="mt-3">Supported Formats</h5>
+                        <ul>
+                            <li>Audio: MP3, WAV, M4A, OGG, FLAC</li>
+                            <li>Max file size: 16MB</li>
+                            <li>Response: JSON</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Authentication -->
+            <section id="authentication" class="mb-5">
+                <h2>Authentication</h2>
+                
+                <div class="auth-box">
+                    <i class="fas fa-info-circle"></i> All API requests require authentication using an API token.
+                </div>
+                
+                <p>Include your API token in the request header:</p>
+                
+                <div class="position-relative">
+                    <button class="copy-btn" onclick="copyCode(this)">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                    <div class="code-block">X-API-Token: YOUR_API_TOKEN</div>
+                </div>
+                
+                <div class="mt-3">
+                    <h5>Getting an API Token</h5>
+                    <ol>
+                        <li>Login to your dashboard</li>
+                        <li>Navigate to <a href="/tokens">API Tokens</a></li>
+                        <li>Click "Create New Token"</li>
+                        <li>Save your token securely (you won't be able to see it again)</li>
+                    </ol>
+                    
+                    {% if not current_user.is_authenticated %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-lock"></i> Admin access required to generate API tokens.
+                        <a href="/login" class="btn btn-sm btn-warning ms-2">Admin Login</a>
+                    </div>
+                    {% elif current_user.tokens|length == 0 %}
+                    <a href="/tokens" class="btn btn-primary mt-2">
+                        <i class="fas fa-key"></i> Create Your First Token
+                    </a>
+                    {% endif %}
+                </div>
+            </section>
+            
+            <!-- Rate Limits -->
+            <section id="rate-limits" class="mb-5">
+                <h2>Rate Limits</h2>
+                
+                <div class="rate-limit-box">
+                    <h5><i class="fas fa-tachometer-alt"></i> Default Limits</h5>
+                    <ul class="mb-0">
+                        <li><strong>100 requests</strong> per hour per token</li>
+                        <li><strong>16MB</strong> maximum file size</li>
+                        <li><strong>60 seconds</strong> request timeout</li>
+                    </ul>
+                </div>
+                
+                <p class="mt-3">
+                    Rate limit information is included in response headers:
+                </p>
+                
+                <div class="code-block">
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640995200</div>
+            </section>
+            
+            <!-- Endpoints -->
+            <section id="endpoints" class="mb-5">
+                <h2>API Endpoints</h2>
+                
+                <!-- Transcribe Endpoint -->
+                <div id="transcribe" class="endpoint-card card">
+                    <div class="card-header d-flex align-items-center">
+                        <span class="method-badge method-post">POST</span>
+                        <code class="ms-3 fs-5">/api/v1/transcribe</code>
+                    </div>
+                    <div class="card-body">
+                        <p>Transcribe an audio file to text.</p>
+                        
+                        <h5>Request Parameters</h5>
+                        <table class="table param-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>audio</code></td>
+                                    <td>file</td>
+                                    <td><span class="badge bg-danger">Required</span></td>
+                                    <td>Audio file to transcribe (MP3, WAV, M4A, OGG, FLAC)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>language</code></td>
+                                    <td>string</td>
+                                    <td><span class="badge bg-secondary">Optional</span></td>
+                                    <td>Target language: ar-MA (default), ar, fr-FR</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h5>Headers</h5>
+                        <table class="table param-table">
+                            <thead>
+                                <tr>
+                                    <th>Header</th>
+                                    <th>Value</th>
+                                    <th>Required</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>X-API-Token</code></td>
+                                    <td>Your API token</td>
+                                    <td><span class="badge bg-danger">Required</span></td>
+                                </tr>
+                                <tr>
+                                    <td><code>Content-Type</code></td>
+                                    <td>multipart/form-data</td>
+                                    <td><span class="badge bg-danger">Required</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h5>Response</h5>
+                        
+                        <div class="mb-3">
+                            <span class="status-code status-200">200 OK</span> - Successful transcription
+                        </div>
+                        
+                        <div class="response-example">
+                            <pre class="mb-0"><code>{
+    "success": true,
+    "transcription": "شوف لي الصنداله شحال باقي فيه",
+    "id": 123,
+    "language": "ar-MA",
+    "confidence": 0.95
+}</code></pre>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <span class="status-code status-400">400 Bad Request</span> - Invalid request
+                        </div>
+                        
+                        <div class="response-example">
+                            <pre class="mb-0"><code>{
+    "error": "No audio file uploaded"
+}</code></pre>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <span class="status-code status-401">401 Unauthorized</span> - Invalid or missing token
+                        </div>
+                        
+                        <div class="response-example">
+                            <pre class="mb-0"><code>{
+    "error": "Invalid token"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- List Tokens Endpoint -->
+                <div id="tokens-list" class="endpoint-card card">
+                    <div class="card-header d-flex align-items-center">
+                        <span class="method-badge method-get">GET</span>
+                        <code class="ms-3 fs-5">/api/v1/tokens</code>
+                    </div>
+                    <div class="card-body">
+                        <p>List all API tokens for the authenticated user (requires login session, not API token).</p>
+                        
+                        <h5>Response</h5>
+                        
+                        <div class="mb-3">
+                            <span class="status-code status-200">200 OK</span>
+                        </div>
+                        
+                        <div class="response-example">
+                            <pre class="mb-0"><code>{
+    "tokens": [
+        {
+            "id": 1,
+            "name": "Production API",
+            "token": "bebrx650...",
+            "created_at": "2024-01-01T00:00:00",
+            "last_used": "2024-01-02T12:00:00",
+            "usage_count": 42,
+            "is_active": true
+        }
+    ]
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Code Examples -->
+            <section id="examples" class="mb-5">
+                <h2>Code Examples</h2>
+                
+                <ul class="nav nav-tabs mb-3" id="exampleTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#curl-example">cURL</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#python-example">Python</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#js-example">JavaScript</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#php-example">PHP</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content">
+                    <!-- cURL -->
+                    <div class="tab-pane fade show active" id="curl-example">
+                        <div class="position-relative">
+                            <button class="copy-btn" onclick="copyCode(this)">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <div class="code-block">curl -X POST {{ request.url_root }}api/v1/transcribe \
+  -H "X-API-Token: YOUR_API_TOKEN" \
+  -F "audio=@/path/to/audio.wav"</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Python -->
+                    <div class="tab-pane fade" id="python-example">
+                        <div class="position-relative">
+                            <button class="copy-btn" onclick="copyCode(this)">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <div class="code-block">import requests
+
+url = "{{ request.url_root }}api/v1/transcribe"
+headers = {
+    "X-API-Token": "YOUR_API_TOKEN"
+}
+
+with open("audio.wav", "rb") as audio_file:
+    files = {"audio": audio_file}
+    response = requests.post(url, headers=headers, files=files)
+    
+if response.ok:
+    result = response.json()
+    print(f"Transcription: {result['transcription']}")
+else:
+    print(f"Error: {response.json()['error']}")</div>
+                        </div>
+                    </div>
+                    
+                    <!-- JavaScript -->
+                    <div class="tab-pane fade" id="js-example">
+                        <div class="position-relative">
+                            <button class="copy-btn" onclick="copyCode(this)">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <div class="code-block">const formData = new FormData();
+formData.append('audio', audioFile);
+
+fetch('{{ request.url_root }}api/v1/transcribe', {
+    method: 'POST',
+    headers: {
+        'X-API-Token': 'YOUR_API_TOKEN'
+    },
+    body: formData
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        console.log('Transcription:', data.transcription);
+    } else {
+        console.error('Error:', data.error);
+    }
+})
+.catch(error => console.error('Network error:', error));</div>
+                        </div>
+                    </div>
+                    
+                    <!-- PHP -->
+                    <div class="tab-pane fade" id="php-example">
+                        <div class="position-relative">
+                            <button class="copy-btn" onclick="copyCode(this)">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <div class="code-block">&lt;?php
+$curl = curl_init();
+
+$file = new CURLFile('/path/to/audio.wav');
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => '{{ request.url_root }}api/v1/transcribe',
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => ['audio' => $file],
+    CURLOPT_HTTPHEADER => [
+        'X-API-Token: YOUR_API_TOKEN'
+    ],
+]);
+
+$response = curl_exec($curl);
+$result = json_decode($response, true);
+
+if ($result['success']) {
+    echo "Transcription: " . $result['transcription'];
+} else {
+    echo "Error: " . $result['error'];
+}
+
+curl_close($curl);
+?&gt;</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Error Handling -->
+            <section id="errors" class="mb-5">
+                <h2>Error Handling</h2>
+                
+                <p>The API uses standard HTTP status codes to indicate success or failure.</p>
+                
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Status Code</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="status-code status-200">200</span></td>
+                            <td>Success - Request completed successfully</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-code status-400">400</span></td>
+                            <td>Bad Request - Invalid parameters or missing required fields</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-code status-401">401</span></td>
+                            <td>Unauthorized - Invalid or missing API token</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-code status-400">413</span></td>
+                            <td>Payload Too Large - File size exceeds 16MB limit</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-code status-400">429</span></td>
+                            <td>Too Many Requests - Rate limit exceeded</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-code status-500">500</span></td>
+                            <td>Internal Server Error - Something went wrong on our end</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h5>Error Response Format</h5>
+                <div class="response-example">
+                    <pre class="mb-0"><code>{
+    "error": "Descriptive error message",
+    "code": "ERROR_CODE",
+    "details": {
+        // Additional error details if available
+    }
+}</code></pre>
+                </div>
+            </section>
+            
+            <!-- Best Practices -->
+            <section id="best-practices" class="mb-5">
+                <h2>Best Practices</h2>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h5><i class="fas fa-lightbulb"></i> Recommendations</h5>
+                        <ul>
+                            <li><strong>Audio Quality:</strong> Use high-quality audio (16kHz or higher) for best results</li>
+                            <li><strong>File Format:</strong> WAV format provides the best compatibility and speed</li>
+                            <li><strong>Error Handling:</strong> Always implement retry logic with exponential backoff</li>
+                            <li><strong>Token Security:</strong> Never expose your API token in client-side code</li>
+                            <li><strong>Rate Limiting:</strong> Implement client-side rate limiting to avoid hitting limits</li>
+                            <li><strong>Batch Processing:</strong> For multiple files, process them sequentially to avoid overwhelming the API</li>
+                        </ul>
+                        
+                        <h5 class="mt-4"><i class="fas fa-shield-alt"></i> Security</h5>
+                        <ul>
+                            <li>Always use HTTPS in production</li>
+                            <li>Store API tokens in environment variables, not in code</li>
+                            <li>Rotate tokens regularly</li>
+                            <li>Monitor token usage for unusual activity</li>
+                        </ul>
+                        
+                        <h5 class="mt-4"><i class="fas fa-language"></i> Language Tips</h5>
+                        <ul>
+                            <li><strong>Moroccan Darija (ar-MA):</strong> Best for Moroccan dialect speech</li>
+                            <li><strong>Standard Arabic (ar):</strong> Use for formal Arabic speech</li>
+                            <li><strong>French (fr-FR):</strong> Good for French or mixed French-Darija content</li>
+                            <li>The API automatically handles code-switching between languages</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Try It Out -->
+            <section class="mb-5">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h3>Ready to Start?</h3>
+                        <p class="lead">Test the API with your audio files</p>
+                        <div class="d-flex justify-content-center gap-3">
+                            {% if current_user.is_authenticated %}
+                            <a href="/tokens" class="btn btn-primary btn-lg">
+                                <i class="fas fa-key"></i> Get API Token
+                            </a>
+                            <a href="/test" class="btn btn-success btn-lg">
+                                <i class="fas fa-vial"></i> Test API
+                            </a>
+                            {% else %}
+                            <a href="/login" class="btn btn-primary btn-lg">
+                                <i class="fas fa-lock"></i> Admin Login Required
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<script>
+// Smooth scrolling for TOC links
+document.querySelectorAll('.toc-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetSection = document.querySelector(targetId);
+        
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Update active state
+            document.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+        }
+    });
+});
+
+// Copy code functionality
+function copyCode(button) {
+    const codeBlock = button.parentElement.querySelector('.code-block');
+    const text = codeBlock.textContent;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        button.style.background = 'rgba(92, 184, 92, 0.3)';
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.style.background = 'rgba(255,255,255,0.1)';
+        }, 2000);
+    });
+}
+
+// Highlight section on scroll
+window.addEventListener('scroll', () => {
+    const sections = document.querySelectorAll('section[id]');
+    const scrollY = window.pageYOffset;
+    
+    sections.forEach(section => {
+        const sectionHeight = section.offsetHeight;
+        const sectionTop = section.offsetTop - 100;
+        const sectionId = section.getAttribute('id');
+        
+        if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
+            document.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
+            document.querySelector(`.toc-link[href="#${sectionId}"]`)?.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}

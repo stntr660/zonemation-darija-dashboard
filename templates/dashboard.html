@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Darija Transcription{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="fas fa-tachometer-alt"></i> Dashboard
+    </h2>
+    
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3>{{ tokens|length }}</h3>
+                <p><i class="fas fa-key"></i> API Tokens</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3>{{ total_transcriptions }}</h3>
+                <p><i class="fas fa-file-audio"></i> Transcriptions</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3>{{ "%.1f"|format(total_duration/60) }}</h3>
+                <p><i class="fas fa-clock"></i> Minutes Processed</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3>{{ current_user.created_at.strftime('%b %d') }}</h3>
+                <p><i class="fas fa-calendar"></i> Member Since</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/test" class="btn btn-primary">
+                            <i class="fas fa-microphone"></i> Test Transcription
+                        </a>
+                        <button class="btn btn-success" onclick="showCreateTokenModal()">
+                            <i class="fas fa-plus"></i> Create API Token
+                        </button>
+                        <a href="/api/docs" class="btn btn-info">
+                            <i class="fas fa-book"></i> View API Documentation
+                        </a>
+                        <a href="/settings" class="btn btn-warning">
+                            <i class="fas fa-cog"></i> Configure Google API
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Active Tokens -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-key"></i> Active Tokens</h5>
+                </div>
+                <div class="card-body">
+                    {% if tokens %}
+                        {% for token in tokens if token.is_active %}
+                        <div class="token-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ token.name }}</strong><br>
+                                    <small class="text-muted">Used {{ token.usage_count }} times</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="revokeToken({{ token.id }})">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No active tokens. <a href="#" onclick="showCreateTokenModal()">Create one</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Transcriptions -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Recent Transcriptions</h5>
+                </div>
+                <div class="card-body">
+                    {% if transcriptions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>File</th>
+                                    <th>Transcription</th>
+                                    <th>Language</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trans in transcriptions %}
+                                <tr>
+                                    <td>{{ trans.created_at.strftime('%b %d, %H:%M') }}</td>
+                                    <td>{{ trans.audio_filename[:20] }}...</td>
+                                    <td class="arabic-text">{{ trans.transcription_text[:50] }}...</td>
+                                    <td><span class="badge bg-primary">{{ trans.language }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-microphone-slash fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No transcriptions yet</p>
+                            <a href="/test" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Upload Your First Audio
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Token Modal -->
+<div class="modal fade" id="createTokenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create API Token</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="tokenName" class="form-label">Token Name</label>
+                    <input type="text" class="form-control" id="tokenName" placeholder="e.g., Production API">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createToken()">Create Token</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Token Created Modal -->
+<div class="modal fade" id="tokenCreatedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Token Created Successfully</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Save this token! You won't be able to see it again.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Your API Token:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control token-value" id="newTokenValue" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyToken()">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCreateTokenModal() {
+    const modal = new bootstrap.Modal(document.getElementById('createTokenModal'));
+    modal.show();
+}
+
+async function createToken() {
+    const name = document.getElementById('tokenName').value || 'Unnamed Token';
+    
+    try {
+        const response = await fetch('/tokens/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Hide create modal
+            bootstrap.Modal.getInstance(document.getElementById('createTokenModal')).hide();
+            
+            // Show token
+            document.getElementById('newTokenValue').value = result.token.token;
+            const modal = new bootstrap.Modal(document.getElementById('tokenCreatedModal'));
+            modal.show();
+            
+            // Refresh page after modal closes
+            document.getElementById('tokenCreatedModal').addEventListener('hidden.bs.modal', () => {
+                location.reload();
+            });
+        }
+    } catch (error) {
+        alert('Error creating token: ' + error.message);
+    }
+}
+
+function copyToken() {
+    const tokenInput = document.getElementById('newTokenValue');
+    tokenInput.select();
+    document.execCommand('copy');
+    
+    // Show feedback
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+    }, 2000);
+}
+
+async function revokeToken(tokenId) {
+    if (!confirm('Are you sure you want to revoke this token?')) return;
+    
+    try {
+        const response = await fetch(`/tokens/${tokenId}/revoke`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        }
+    } catch (error) {
+        alert('Error revoking token: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+instance/
+*.db
+*.pyc
+__pycache__/
+uploads/
+.env
+*.wav
+*.m4a
+*.mp3
+*.ogg
+*.flac
