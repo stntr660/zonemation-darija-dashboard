@@ -719,10 +719,162 @@ def transcribe():
 @limiter.limit("100 per hour")
 def api_transcribe(api_token):
     """API endpoint for transcription with token authentication"""
-    # Similar to transcribe() but with token tracking
-    # [Implementation similar to above with api_token tracking]
-    # ... (same logic as transcribe but with api_token parameter)
-    pass
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file uploaded'}), 400
+    
+    file = request.files['audio']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Validate file extension
+    filename = secure_filename(file.filename)
+    file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    
+    allowed_extensions = {'wav', 'mp3', 'm4a', 'ogg', 'flac', 'webm'}
+    if file_ext not in allowed_extensions:
+        return jsonify({'error': f'File type not allowed. Allowed types: {", ".join(allowed_extensions)}'}), 400
+    
+    # Save file with unique name
+    unique_filename = f"api_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}_{filename}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    
+    try:
+        file.save(filepath)
+    except Exception as e:
+        app.logger.error(f'Failed to save file: {e}')
+        return jsonify({'error': 'Failed to save audio file'}), 500
+    
+    wav_filepath = None
+    
+    try:
+        # Get file size
+        file_size = os.path.getsize(filepath)
+        
+        # Convert to WAV if needed
+        if not filename.lower().endswith('.wav'):
+            try:
+                # Convert to WAV using pydub
+                if filename.lower().endswith('.mp3'):
+                    audio = AudioSegment.from_mp3(filepath)
+                elif filename.lower().endswith('.m4a'):
+                    audio = AudioSegment.from_file(filepath, format='m4a')
+                elif filename.lower().endswith('.ogg'):
+                    audio = AudioSegment.from_ogg(filepath)
+                elif filename.lower().endswith('.flac'):
+                    audio = AudioSegment.from_file(filepath, format='flac')
+                elif filename.lower().endswith('.webm'):
+                    audio = AudioSegment.from_file(filepath, format='webm')
+                else:
+                    audio = AudioSegment.from_file(filepath)
+                
+                # Convert to WAV
+                wav_filepath = filepath.rsplit('.', 1)[0] + '_converted.wav'
+                audio = audio.set_frame_rate(16000).set_channels(1)  # 16kHz mono
+                audio.export(wav_filepath, format='wav')
+                
+                # Calculate duration
+                duration = len(audio) / 1000.0  # Convert to seconds
+                
+                process_filepath = wav_filepath
+            except Exception as e:
+                app.logger.error(f'Audio conversion error: {e}')
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                return jsonify({'error': f'Audio conversion failed: {str(e)}'}), 500
+        else:
+            process_filepath = filepath
+            duration = 0  # Will calculate later
+        
+        # Use Google Speech Recognition
+        r = sr.Recognizer()
+        
+        try:
+            with sr.AudioFile(process_filepath) as source:
+                r.adjust_for_ambient_noise(source, duration=0.5)
+                audio_data = r.record(source)
+                
+                # Calculate duration if not set
+                if duration == 0:
+                    duration = len(audio_data.frame_data) / (audio_data.sample_rate * audio_data.sample_width)
+        except Exception as e:
+            app.logger.error(f'Audio file read error: {e}')
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            if wav_filepath and os.path.exists(wav_filepath):
+                os.remove(wav_filepath)
+            return jsonify({'error': f'Failed to read audio file: {str(e)}'}), 500
+        
+        # Transcribe
+        try:
+            text = r.recognize_google(audio_data, language="ar-MA")
+        except sr.UnknownValueError:
+            # Clean up files
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            if wav_filepath and os.path.exists(wav_filepath):
+                os.remove(wav_filepath)
+            return jsonify({'error': 'Could not understand audio. Please ensure the audio is clear and contains speech.'}), 400
+        except sr.RequestError as e:
+            # Clean up files
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            if wav_filepath and os.path.exists(wav_filepath):
+                os.remove(wav_filepath)
+            app.logger.error(f'Google API error: {e}')
+            return jsonify({'error': f'Speech recognition API error: {str(e)}'}), 503
+        
+        # Save transcription record
+        try:
+            transcription = Transcription(
+                user_id=api_token.user_id,
+                token_id=api_token.id,
+                audio_filename=filename,
+                transcription_text=text,
+                language='ar-MA',
+                duration_seconds=duration,
+                file_size_bytes=file_size,
+                ip_address=request.remote_addr,
+                user_agent=request.user_agent.string[:255] if request.user_agent else 'API Client'
+            )
+            db.session.add(transcription)
+            db.session.commit()
+            transcription_id = transcription.id
+        except Exception as e:
+            app.logger.error(f'Database error: {e}')
+            # Still return transcription even if DB save fails
+            transcription_id = None
+        
+        # Clean up files
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        if wav_filepath and os.path.exists(wav_filepath):
+            os.remove(wav_filepath)
+        
+        return jsonify({
+            'success': True,
+            'transcription': text,
+            'id': transcription_id,
+            'language': 'ar-MA'
+        })
+        
+    except Exception as e:
+        app.logger.error(f'API transcription error: {e}')
+        import traceback
+        app.logger.error(traceback.format_exc())
+        
+        # Clean up files on error
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        if wav_filepath and os.path.exists(wav_filepath):
+            os.remove(wav_filepath)
+        
+        # Provide helpful error message
+        error_msg = str(e)
+        if "AudioSegment" in error_msg or "ffmpeg" in error_msg.lower():
+            error_msg = "Audio processing error. FFmpeg may not be installed on the server."
+        
+        return jsonify({'error': 'Transcription failed', 'details': error_msg}), 500
 
 @app.route('/api/v1/tokens', methods=['GET'])
 @login_required
