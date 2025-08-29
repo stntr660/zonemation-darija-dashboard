@@ -11,7 +11,7 @@ load_dotenv()
 class Config:
     """Base configuration"""
     # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(32).hex()
+    SECRET_KEY = os.environ.get('SECRET_KEY', os.urandom(32).hex())
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///dashboard.db')
@@ -73,10 +73,6 @@ class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
     TESTING = False
-    
-    # Require secure settings in production
-    if not os.environ.get('SECRET_KEY'):
-        raise ValueError("SECRET_KEY must be set in production")
     
     # Force HTTPS in production
     SESSION_COOKIE_SECURE = True

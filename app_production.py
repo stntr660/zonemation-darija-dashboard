@@ -28,7 +28,9 @@ from config import config
 
 # Initialize Flask app with configuration
 app = Flask(__name__)
-app_config = config[os.environ.get('FLASK_ENV', 'production')]
+env = os.environ.get('FLASK_ENV', 'production')
+print(f"Starting app in {env} mode")
+app_config = config.get(env, config['production'])
 app.config.from_object(app_config)
 
 # Create necessary directories
