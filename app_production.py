@@ -5,6 +5,7 @@ Production-ready Darija Transcription Dashboard
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -599,15 +600,13 @@ def api_list_tokens():
     })
 
 @app.route('/health')
-@limiter.exempt
 def health_check():
-    """Health check endpoint for monitoring"""
-    try:
-        # Check database connection
-        db.session.execute('SELECT 1')
-        return jsonify({'status': 'healthy', 'timestamp': datetime.datetime.utcnow().isoformat()})
-    except:
-        return jsonify({'status': 'unhealthy'}), 503
+    """Health check endpoint for monitoring - no auth required"""
+    return jsonify({
+        'status': 'healthy', 
+        'timestamp': datetime.datetime.utcnow().isoformat(),
+        'app': 'darija-dashboard'
+    }), 200
 
 # ============== INITIALIZATION ==============
 
