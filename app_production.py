@@ -151,16 +151,56 @@ def test_login():
 def force_create_admin():
     """Force create admin user - REMOVE IN PRODUCTION"""
     try:
-        # Check if admin already exists
+        # First, show all existing users
+        all_users = User.query.all()
+        users_list = [{'username': u.username, 'email': u.email, 'is_admin': u.is_admin} for u in all_users]
+        
+        # Check if user with email exists
+        existing_by_email = User.query.filter_by(email=app.config.get('ADMIN_EMAIL', 'admin@zonemation.com')).first()
+        
+        if existing_by_email:
+            # User exists, let's reset the password
+            admin_password = app.config.get('ADMIN_PASSWORD', 'Admin123!')
+            existing_by_email.set_password(admin_password)
+            existing_by_email.is_admin = True
+            existing_by_email.is_active = True
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'User exists - password reset',
+                'username': existing_by_email.username,
+                'email': existing_by_email.email,
+                'password_set_to': 'Your ADMIN_PASSWORD env var' if app.config.get('ADMIN_PASSWORD') else 'Admin123!',
+                'login_with': {
+                    'username': existing_by_email.username,
+                    'password': 'Your ADMIN_PASSWORD value' if app.config.get('ADMIN_PASSWORD') else 'Admin123!'
+                },
+                'all_users': users_list
+            }), 200
+        
+        # Check if admin username exists
         existing = User.query.filter_by(username='admin').first()
         if existing:
-            return jsonify({'message': 'Admin already exists', 'username': existing.username}), 200
+            admin_password = app.config.get('ADMIN_PASSWORD', 'Admin123!')
+            existing.set_password(admin_password)
+            existing.is_admin = True
+            existing.is_active = True
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'Admin exists - password reset', 
+                'username': existing.username,
+                'email': existing.email,
+                'password_set_to': 'Your ADMIN_PASSWORD env var' if app.config.get('ADMIN_PASSWORD') else 'Admin123!',
+                'login_with': {
+                    'username': 'admin',
+                    'password': 'Your ADMIN_PASSWORD value' if app.config.get('ADMIN_PASSWORD') else 'Admin123!'
+                },
+                'all_users': users_list
+            }), 200
         
-        # Get password from environment or use default
-        admin_password = app.config.get('ADMIN_PASSWORD', '')
-        if not admin_password:
-            # Use a temporary password
-            admin_password = 'Admin123!'
+        # No user exists, create new one
+        admin_password = app.config.get('ADMIN_PASSWORD', 'Admin123!')
             
         # Create admin user
         admin_user = User(
@@ -178,8 +218,12 @@ def force_create_admin():
             'message': 'Admin user created successfully',
             'username': 'admin',
             'email': admin_user.email,
-            'password_hint': 'Use the password from ADMIN_PASSWORD env var, or Admin123! if not set',
-            'actual_password_set': admin_password if not app.config.get('ADMIN_PASSWORD') else 'From ADMIN_PASSWORD env var'
+            'password_set_to': 'Your ADMIN_PASSWORD env var' if app.config.get('ADMIN_PASSWORD') else 'Admin123!',
+            'login_with': {
+                'username': 'admin',
+                'password': 'Your ADMIN_PASSWORD value' if app.config.get('ADMIN_PASSWORD') else 'Admin123!'
+            },
+            'all_users': [{'username': u.username, 'email': u.email, 'is_admin': u.is_admin} for u in User.query.all()]
         }), 200
     except Exception as e:
         return jsonify({'error': str(e), 'trace': str(e.__class__.__name__)}), 500
