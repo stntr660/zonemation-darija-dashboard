@@ -113,7 +113,13 @@ def test_login():
         admin = User.query.filter_by(username='admin').first()
         
         if not admin:
-            return jsonify({'error': 'No admin user found'}), 404
+            # No admin found, let's help create one
+            return jsonify({
+                'error': 'No admin user found',
+                'all_users': [{'username': u.username, 'email': u.email} for u in User.query.all()],
+                'total_users': User.query.count(),
+                'hint': 'Visit /debug/create-admin to create admin user'
+            }), 404
         
         # Test password from environment
         test_password = app.config.get('ADMIN_PASSWORD', '')
@@ -140,6 +146,43 @@ def test_login():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/debug/create-admin')
+def force_create_admin():
+    """Force create admin user - REMOVE IN PRODUCTION"""
+    try:
+        # Check if admin already exists
+        existing = User.query.filter_by(username='admin').first()
+        if existing:
+            return jsonify({'message': 'Admin already exists', 'username': existing.username}), 200
+        
+        # Get password from environment or use default
+        admin_password = app.config.get('ADMIN_PASSWORD', '')
+        if not admin_password:
+            # Use a temporary password
+            admin_password = 'Admin123!'
+            
+        # Create admin user
+        admin_user = User(
+            username='admin',
+            email=app.config.get('ADMIN_EMAIL', 'admin@zonemation.com'),
+            is_admin=True,
+            is_active=True
+        )
+        admin_user.set_password(admin_password)
+        db.session.add(admin_user)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Admin user created successfully',
+            'username': 'admin',
+            'email': admin_user.email,
+            'password_hint': 'Use the password from ADMIN_PASSWORD env var, or Admin123! if not set',
+            'actual_password_set': admin_password if not app.config.get('ADMIN_PASSWORD') else 'From ADMIN_PASSWORD env var'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e), 'trace': str(e.__class__.__name__)}), 500
 
 # ============== DATABASE MODELS ==============
 
