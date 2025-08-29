@@ -105,6 +105,42 @@ def health_check():
         'app': 'darija-dashboard'
     }), 200
 
+@app.route('/debug/test-login')
+def test_login():
+    """Debug endpoint to test login - REMOVE IN PRODUCTION"""
+    try:
+        # Get admin user
+        admin = User.query.filter_by(username='admin').first()
+        
+        if not admin:
+            return jsonify({'error': 'No admin user found'}), 404
+        
+        # Test password from environment
+        test_password = app.config.get('ADMIN_PASSWORD', '')
+        
+        # Create a test user to verify password hashing works
+        test_user = User(username='test_temp', email='test@test.com', is_admin=True, is_active=True)
+        test_user.set_password(test_password)
+        
+        # Test if password verification works
+        password_works = test_user.check_password(test_password)
+        admin_password_works = admin.check_password(test_password) if test_password else False
+        
+        return jsonify({
+            'admin_exists': True,
+            'admin_username': admin.username,
+            'admin_email': admin.email,
+            'admin_is_active': admin.is_active,
+            'admin_is_admin': admin.is_admin,
+            'test_password_from_env': bool(test_password),
+            'test_password_length': len(test_password) if test_password else 0,
+            'password_hashing_works': password_works,
+            'admin_password_matches_env': admin_password_works,
+            'hint': 'If admin_password_matches_env is False, set RESET_ADMIN_PASSWORD=true'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # ============== DATABASE MODELS ==============
 
 class User(UserMixin, db.Model):
