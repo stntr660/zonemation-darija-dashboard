@@ -1,0 +1,15 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "gunicorn --config gunicorn.conf.py app_production:app"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "always"
+
+[[services]]
+name = "web"
+protocol = "http"
+
+[services.web]
+port = 8000

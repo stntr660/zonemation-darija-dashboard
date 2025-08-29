@@ -1,0 +1,9 @@
+# Nixpacks configuration for Railway
+[phases.setup]
+nixPkgs = ["python311", "ffmpeg", "postgresql", "gcc"]
+
+[phases.install]
+cmds = ["pip install -r requirements_production.txt"]
+
+[start]
+cmd = "gunicorn --config gunicorn.conf.py app_production:app"
