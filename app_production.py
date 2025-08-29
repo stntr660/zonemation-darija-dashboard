@@ -272,6 +272,12 @@ def login():
         
         user = User.query.filter_by(username=username).first()
         
+        # Debug logging
+        app.logger.info(f'Login attempt for username: {username}')
+        app.logger.info(f'User found: {user is not None}')
+        if user:
+            app.logger.info(f'User email: {user.email}, is_admin: {user.is_admin}, is_active: {user.is_active}')
+        
         # Check if account is locked
         if user and user.locked_until and user.locked_until > datetime.datetime.utcnow():
             if request.is_json:
@@ -287,13 +293,14 @@ def login():
             db.session.commit()
             
             login_user(user, remember=True)
-            app.logger.info(f'User {username} logged in from {request.remote_addr}')
+            app.logger.info(f'User {username} logged in successfully from {request.remote_addr}')
             
             if request.is_json:
                 return jsonify({'success': True, 'redirect': '/dashboard'})
             
             return redirect(url_for('dashboard'))
         else:
+            app.logger.warning(f'Login failed for {username} - password mismatch')
             # Track failed login attempts
             if user:
                 user.failed_login_attempts += 1
@@ -677,7 +684,17 @@ with app.app_context():
             else:
                 app.logger.warning(f'No ADMIN_PASSWORD set in environment - admin user not created. Password value: {bool(admin_password)}')
         else:
-            app.logger.info(f'Admin user already exists: {existing_admin.username}')
+            # Update existing admin password if RESET_ADMIN_PASSWORD is set
+            if os.environ.get('RESET_ADMIN_PASSWORD', '').lower() == 'true':
+                admin_password = app.config.get('ADMIN_PASSWORD')
+                if admin_password and admin_password.strip():
+                    existing_admin.set_password(admin_password)
+                    db.session.commit()
+                    app.logger.info(f'Admin password reset for user: {existing_admin.username}')
+                else:
+                    app.logger.warning('RESET_ADMIN_PASSWORD set but no ADMIN_PASSWORD provided')
+            else:
+                app.logger.info(f'Admin user already exists: {existing_admin.username} (set RESET_ADMIN_PASSWORD=true to reset password)')
     except Exception as e:
         app.logger.error(f'Database initialization error: {e}')
         import traceback
