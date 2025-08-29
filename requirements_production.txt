@@ -1,0 +1,43 @@
+# Core Flask dependencies
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.2
+Werkzeug==2.3.7
+
+# Database
+psycopg2-binary==2.9.7  # PostgreSQL
+PyMySQL==1.1.0  # MySQL (optional)
+SQLAlchemy==2.0.20
+
+# Security
+Flask-Limiter==3.3.1
+Flask-Cors==4.0.0
+Flask-Talisman==1.1.0
+cryptography==41.0.3
+python-dotenv==1.0.0
+
+# Audio processing
+SpeechRecognition==3.10.0
+pydub==0.25.1
+# Note: ffmpeg must be installed separately on the system
+
+# API and validation
+email-validator==2.0.0
+python-dateutil==2.8.2
+
+# Production server
+gunicorn==21.2.0
+gevent==23.7.0  # For async workers
+
+# Caching and sessions
+redis==4.6.0
+Flask-Session==0.5.0
+
+# Monitoring (optional)
+sentry-sdk[flask]==1.29.2
+prometheus-flask-exporter==0.22.4
+
+# Testing (optional)
+pytest==7.4.0
+pytest-flask==1.2.0
+coverage==7.3.0

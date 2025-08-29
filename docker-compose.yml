@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: darija-db
+    environment:
+      POSTGRES_DB: darija_db
+      POSTGRES_USER: darija_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - darija-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U darija_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: darija-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - darija-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Main Application
+  app:
+    build: .
+    container_name: darija-app
+    environment:
+      # Flask Configuration
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      
+      # Database
+      DATABASE_URL: postgresql://darija_user:${DB_PASSWORD:-changeme}@postgres:5432/darija_db
+      
+      # Redis
+      RATELIMIT_STORAGE_URL: redis://redis:6379
+      
+      # Security
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_COOKIE_SECURE: "True"
+      
+      # Admin (first run)
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@zonemation.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      
+      # Monitoring (optional)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - darija-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (optional, for SSL termination)
+  nginx:
+    image: nginx:alpine
+    container_name: darija-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    networks:
+      - darija-network
+    restart: unless-stopped
+
+networks:
+  darija-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
