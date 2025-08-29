@@ -546,7 +546,17 @@ def transcribe():
         
         # Moroccan Arabic
         try:
-            text = r.recognize_google(audio, language="ar-MA")
+            # Use API key if available for higher limits
+            google_api_key = current_user.get_google_api_key() if current_user.is_authenticated else None
+            if not google_api_key:
+                google_api_key = app.config.get('GOOGLE_API_KEY')
+            
+            if google_api_key:
+                text = r.recognize_google(audio, key=google_api_key, language="ar-MA")
+                app.logger.info('Using Google API with key')
+            else:
+                text = r.recognize_google(audio, language="ar-MA")
+                app.logger.warning('Using Google API without key (limited)')
             results['darija'] = text
         except sr.UnknownValueError:
             results['darija'] = "Could not understand audio"
@@ -729,7 +739,15 @@ def api_transcribe(api_token):
         
         # Transcribe
         try:
-            text = r.recognize_google(audio_data, language="ar-MA")
+            # Use API key for higher limits
+            google_api_key = app.config.get('GOOGLE_API_KEY')
+            
+            if google_api_key:
+                text = r.recognize_google(audio_data, key=google_api_key, language="ar-MA")
+                app.logger.info(f'API transcription using Google API with key for token {api_token.name}')
+            else:
+                text = r.recognize_google(audio_data, language="ar-MA")
+                app.logger.warning(f'API transcription using free tier (limited) for token {api_token.name}')
         except sr.UnknownValueError:
             # Clean up files
             if os.path.exists(filepath):

@@ -21,6 +21,9 @@ SpeechRecognition==3.10.0
 pydub==0.25.1
 # Note: ffmpeg must be installed separately on the system
 
+# Google Cloud Speech API (official)
+google-cloud-speech==2.21.0
+
 # API and validation
 email-validator==2.0.0
 python-dateutil==2.8.2

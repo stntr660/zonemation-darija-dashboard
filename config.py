@@ -48,6 +48,9 @@ class Config:
     # Encryption (for API keys)
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
     
+    # Google API
+    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+    
     # Admin defaults (first run only)
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
     ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@zonemation.com')
